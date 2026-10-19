@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Catálogo de lociones</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --fondo:#eef0f4; --tarjeta:#ffffff; --tinta:#2a1838; --suave:#6d6478;
+  --acento:#2f8f83; --acento-osc:#206b61; --linea:#d9dce4; --aviso:#b4492f;
+}
+*{box-sizing:border-box;margin:0}
+html{scroll-padding-top:90px}
+body{font-family:Manrope,system-ui,sans-serif;background:var(--fondo);color:var(--tinta);line-height:1.5;padding-bottom:90px}
+button,input{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--acento);outline-offset:2px}
+header{padding:28px 16px 12px;max-width:1100px;margin:0 auto}
+h1{font-size:clamp(1.9rem,6vw,3rem);font-weight:800;letter-spacing:-.03em;line-height:1.05}
+.sub{color:var(--suave);margin-top:6px;max-width:46ch}
+.barra{position:sticky;top:0;z-index:5;background:var(--fondo);padding:10px 16px 12px;max-width:1100px;margin:0 auto}
+.buscar{width:100%;padding:12px 16px;border:1px solid var(--linea);border-radius:12px;background:#fff}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:10px 0 2px;scrollbar-width:none}
+.chip{flex:none;padding:7px 14px;border:1px solid var(--linea);border-radius:999px;background:#fff;cursor:pointer;font-weight:600;font-size:.9rem}
+.chip[aria-pressed="true"]{background:var(--tinta);color:#fff;border-color:var(--tinta)}
+main{max-width:1100px;margin:0 auto;padding:8px 16px}
+.rejilla{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px}
+.prod{background:var(--tarjeta);border-radius:16px;overflow:hidden;display:flex;flex-direction:column;border:1px solid var(--linea)}
+.foto{aspect-ratio:1/1;background:#e4e0ec;display:grid;place-items:center;cursor:pointer;border:0;padding:0;width:100%}
+.foto img{width:100%;height:100%;object-fit:contain;background:#fff}
+.sinfoto{font-size:2.6rem;font-weight:800;color:#a79bb8}
+.info{padding:12px;display:flex;flex-direction:column;gap:2px;flex:1}
+.marca{font-size:.8rem;color:var(--suave)}
+.nombre{font-weight:600;line-height:1.25}
+.precio{font-weight:800;font-size:1.15rem;margin-top:auto;padding-top:8px}
+.btn{border:0;border-radius:10px;padding:10px 14px;font-weight:600;cursor:pointer;background:var(--acento);color:#fff}
+.btn:hover{background:var(--acento-osc)}
+.btn[disabled]{background:#c9c4d2;cursor:not-allowed}
+.btn.sec{background:transparent;color:var(--tinta);border:1px solid var(--linea)}
+.prod .btn{margin:8px 12px 12px}
+.agotado{color:var(--aviso);font-weight:600;font-size:.85rem}
+.vacio{padding:40px 0;color:var(--suave);text-align:center}
+.pie-carrito{position:fixed;left:0;right:0;bottom:0;padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px));display:none;z-index:6}
+.pie-carrito.on{display:block}
+.pie-carrito button{width:100%;max-width:520px;margin:0 auto;display:flex;justify-content:space-between;padding:15px 20px;font-size:1rem;box-shadow:0 6px 24px rgba(42,24,56,.3);background:var(--tinta)}
+dialog{border:0;border-radius:20px;padding:0;width:min(520px,calc(100% - 24px));max-height:88vh;background:var(--tarjeta);color:var(--tinta)}
+dialog::backdrop{background:rgba(42,24,56,.55)}
+.dlg{padding:20px;display:flex;flex-direction:column;gap:12px}
+.dlg img{width:100%;max-height:300px;object-fit:contain;background:#fff;border-radius:12px}
+.dlg h2{font-size:1.4rem;line-height:1.2}
+.fila{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--linea)}
+.cant{display:flex;align-items:center;gap:10px}
+.cant button{width:32px;height:32px;border-radius:50%;border:1px solid var(--linea);background:#fff;cursor:pointer;font-weight:800}
+.total{display:flex;justify-content:space-between;font-weight:800;font-size:1.2rem;padding-top:6px}
+.acciones{display:flex;gap:10px}
+.acciones .btn{flex:1}
+@media (prefers-reduced-motion:no-preference){.prod .foto img{transition:transform .25s}.foto:hover img{transform:scale(1.04)}}
+</style>
+</head>
+<body>
+
+<header>
+  <h1 id="tienda"></h1>
+  <p class="sub">Elige tus lociones, arma tu pedido y envíalo directo por WhatsApp.</p>
+</header>
+
+<div class="barra">
+  <input class="buscar" id="buscar" type="search" placeholder="Buscar por nombre o marca" aria-label="Buscar lociones">
+  <div class="chips" id="chips" role="group" aria-label="Categorías"></div>
+</div>
+
+<main>
+  <div class="rejilla" id="rejilla"></div>
+  <p class="vacio" id="vacio" hidden></p>
+</main>
+
+<div class="pie-carrito" id="pie"><button class="btn" id="abrirCarrito"><span id="pieCant"></span><span id="pieTotal"></span></button></div>
+
+<dialog id="detalle"><div class="dlg" id="detalleCont"></div></dialog>
+<dialog id="carrito"><div class="dlg" id="carritoCont"></div></dialog>
+
+<script>
+/* ============ CONFIGURACIÓN: edita solo esto ============ */
+const CONFIG = {
+  tienda: "Ghali Parfums",
+  whatsapp: "573157631773",   // tu número con código de país, sin + ni espacios
+  hojaCSV: "https://docs.google.com/spreadsheets/d/e/2PACX-1vTcvLOCB_3Tlx5lPjukOkJzV6v2HAezdKxQks4gwGIjQCaFobOie5ZDeOVFPT9vK-pbr7qYdKFgqCix/pub?output=csv",                // enlace CSV de tu Google Sheet (ver instrucciones). Vacío = datos de ejemplo
+  simbolo: "$"
+};
+/* ========================================================= */
+
+const EJEMPLO = [
+  {nombre:"Aqua Fresh 100 ml",marca:"Marca A",categoria:"Hombre",precio:"45000",foto:"",descripcion:"Aroma cítrico y fresco para el día a día.",disponible:"si"},
+  {nombre:"Noche Ámbar 50 ml",marca:"Marca B",categoria:"Mujer",precio:"62000",foto:"",descripcion:"Notas cálidas de ámbar y vainilla.",disponible:"si"},
+  {nombre:"Brisa Unisex 100 ml",marca:"Marca A",categoria:"Unisex",precio:"38000",foto:"",descripcion:"Ligera, con toques de té verde.",disponible:"no"}
+];
+
+let productos = [], carrito = {}, filtroCat = "Todas", texto = "";
+const $ = id => document.getElementById(id);
+const dinero = n => CONFIG.simbolo + Number(n).toLocaleString("es");
+const norm = s => (s||"").toString().normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().trim();
+
+function parseCSV(t){
+  const filas=[]; let fila=[], c="", q=false;
+  for(let i=0;i<t.length;i++){
+    const ch=t[i];
+    if(q){ if(ch=='"'){ if(t[i+1]=='"'){c+='"';i++} else q=false } else c+=ch }
+    else if(ch=='"') q=true;
+    else if(ch==','){fila.push(c);c=""}
+    else if(ch=='\n'||ch=='\r'){ if(ch=='\r'&&t[i+1]=='\n')i++; fila.push(c);c=""; filas.push(fila); fila=[] }
+    else c+=ch;
+  }
+  if(c!==""||fila.length){fila.push(c);filas.push(fila)}
+  const cab = filas.shift().map(norm);
+  return filas.filter(f=>f.some(x=>x.trim())).map(f=>{
+    const o={}; cab.forEach((k,i)=>o[k]=(f[i]||"").trim()); return o;
+  });
+}
+
+async function cargar(){
+  $("tienda").textContent = CONFIG.tienda;
+  document.title = CONFIG.tienda;
+  let datos = EJEMPLO;
+  if(CONFIG.hojaCSV){
+    try{
+      const r = await fetch(CONFIG.hojaCSV + (CONFIG.hojaCSV.includes("?")?"&":"?") + "t=" + Date.now());
+      if(!r.ok) throw new Error(r.status);
+      datos = parseCSV(await r.text());
+    }catch(e){
+      $("vacio").hidden=false;
+      $("vacio").textContent="No pudimos cargar el catálogo. Revisa tu conexión e inténtalo de nuevo.";
+      return;
+    }
+  }
+  productos = datos.map((d,i)=>({
+    id:i, nombre:d.nombre||"Sin nombre", marca:d.marca||"", categoria:d.categoria||"Otras",
+    precio:parseFloat((d.precio||"0").replace(/[^\d.]/g,""))||0, foto:d.foto||"",
+    descripcion:d.descripcion||"", disponible:!["no","n","0","false","agotado"].includes(norm(d.disponible))
+  })).filter(p=>p.nombre);
+  try{ carrito = JSON.parse(localStorage.getItem("carritoLociones")||"{}") }catch(e){ carrito={} }
+  Object.keys(carrito).forEach(k=>{ if(!productos[k]||!productos[k].disponible) delete carrito[k] });
+  pintarChips(); pintar(); pintarPie();
+}
+
+function pintarChips(){
+  const cats = ["Todas", ...new Set(productos.map(p=>p.categoria))];
+  $("chips").innerHTML = "";
+  cats.forEach(c=>{
+    const b=document.createElement("button"); b.className="chip"; b.textContent=c;
+    b.setAttribute("aria-pressed", c===filtroCat);
+    b.onclick=()=>{filtroCat=c;pintarChips();pintar()};
+    $("chips").appendChild(b);
+  });
+}
+
+function imgHTML(p){
+  return p.foto ? `<img src="${esc(p.foto)}" alt="${esc(p.nombre)}" loading="lazy">` : `<span class="sinfoto">${esc(p.nombre[0]||"?")}</span>`;
+}
+function esc(s){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
+
+function pintar(){
+  const q = norm(texto);
+  const lista = productos.filter(p=>(filtroCat==="Todas"||p.categoria===filtroCat)&&(!q||norm(p.nombre+" "+p.marca).includes(q)));
+  $("rejilla").innerHTML = lista.map(p=>`
+    <article class="prod">
+      <button class="foto" data-ver="${p.id}" aria-label="Ver ${esc(p.nombre)}">${imgHTML(p)}</button>
+      <div class="info">
+        <span class="marca">${esc(p.marca)}</span>
+        <span class="nombre">${esc(p.nombre)}</span>
+        ${p.disponible?`<span class="precio">${dinero(p.precio)}</span>`:`<span class="precio agotado">Agotado</span>`}
+      </div>
+      <button class="btn" data-add="${p.id}" ${p.disponible?"":"disabled"}>Agregar</button>
+    </article>`).join("");
+  $("vacio").hidden = lista.length>0 || !!$("vacio").textContent.startsWith("No pudimos");
+  if(!lista.length && !$("vacio").textContent.startsWith("No pudimos")){ $("vacio").hidden=false; $("vacio").textContent="No hay lociones con esa búsqueda. Prueba con otro nombre o categoría." }
+}
+
+$("rejilla").onclick = e=>{
+  const v=e.target.closest("[data-ver]"), a=e.target.closest("[data-add]");
+  if(v) verDetalle(+v.dataset.ver);
+  if(a) agregar(+a.dataset.add);
+};
+$("buscar").oninput = e=>{texto=e.target.value;pintar()};
+
+function agregar(id){ carrito[id]=(carrito[id]||0)+1; guardar(); pintarPie(); }
+function guardar(){ try{localStorage.setItem("carritoLociones",JSON.stringify(carrito))}catch(e){} }
+function totales(){ let n=0,t=0; for(const k in carrito){ n+=carrito[k]; t+=carrito[k]*productos[k].precio } return {n,t} }
+function pintarPie(){
+  const {n,t}=totales();
+  $("pie").classList.toggle("on", n>0);
+  $("pieCant").textContent = `Ver pedido (${n})`;
+  $("pieTotal").textContent = dinero(t);
+}
+
+function verDetalle(id){
+  const p=productos[id];
+  $("detalleCont").innerHTML = `
+    ${p.foto?`<img src="${esc(p.foto)}" alt="${esc(p.nombre)}">`:""}
+    <span class="marca">${esc(p.marca)} · ${esc(p.categoria)}</span>
+    <h2>${esc(p.nombre)}</h2>
+    <p>${esc(p.descripcion)||"Sin descripción."}</p>
+    <p class="precio">${p.disponible?dinero(p.precio):"Agotado"}</p>
+    <div class="acciones"><button class="btn sec" data-cerrar>Cerrar</button>
+    <button class="btn" data-agregar ${p.disponible?"":"disabled"}>Agregar al pedido</button></div>`;
+  $("detalle").showModal();
+  $("detalleCont").querySelector("[data-agregar]").onclick=()=>{agregar(id);$("detalle").close()};
+  $("detalleCont").querySelector("[data-cerrar]").onclick=()=>$("detalle").close();
+}
+
+function pintarCarrito(){
+  const ids=Object.keys(carrito), {t}=totales();
+  if(!ids.length){
+    $("carritoCont").innerHTML=`<h2>Tu pedido</h2><p class="vacio">Aún no agregaste lociones.</p><button class="btn sec" data-cerrar>Seguir viendo</button>`;
+  } else {
+    $("carritoCont").innerHTML = `<h2>Tu pedido</h2>` + ids.map(k=>{const p=productos[k];return `
+      <div class="fila"><div><div class="nombre">${esc(p.nombre)}</div><span class="marca">${dinero(p.precio)} c/u</span></div>
+      <div class="cant"><button data-menos="${k}" aria-label="Quitar una">−</button><b>${carrito[k]}</b><button data-mas="${k}" aria-label="Agregar una">+</button></div></div>`}).join("") +
+      `<div class="total"><span>Total</span><span>${dinero(t)}</span></div>
+       <div class="acciones"><button class="btn sec" data-cerrar>Seguir viendo</button><button class="btn" data-enviar>Enviar por WhatsApp</button></div>`;
+  }
+  const c=$("carritoCont");
+  c.querySelectorAll("[data-cerrar]").forEach(b=>b.onclick=()=>$("carrito").close());
+  c.querySelectorAll("[data-mas]").forEach(b=>b.onclick=()=>{carrito[b.dataset.mas]++;cambio()});
+  c.querySelectorAll("[data-menos]").forEach(b=>b.onclick=()=>{const k=b.dataset.menos;if(--carrito[k]<=0)delete carrito[k];cambio()});
+  const env=c.querySelector("[data-enviar]"); if(env) env.onclick=enviar;
+}
+function cambio(){guardar();pintarPie();pintarCarrito();if(!Object.keys(carrito).length)pintarCarrito()}
+$("abrirCarrito").onclick=()=>{pintarCarrito();$("carrito").showModal()};
+
+function enviar(){
+  const {t}=totales();
+  let msg = "Hola, quiero hacer este pedido:\n\n";
+  for(const k in carrito){ const p=productos[k]; msg += `• ${carrito[k]} × ${p.nombre} (${p.marca}) — ${dinero(p.precio*carrito[k])}\n` }
+  msg += `\nTotal: ${dinero(t)}`;
+  window.open(`https://wa.me/${CONFIG.whatsapp}?text=${encodeURIComponent(msg)}`,"_blank");
+}
+
+[$("detalle"),$("carrito")].forEach(d=>d.addEventListener("click",e=>{if(e.target===d)d.close()}));
+cargar();
+</script>
+</body>
+</html>
